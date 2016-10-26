@@ -1602,6 +1602,11 @@ class WXR_Importer extends WP_Importer {
 			$key = array_search( $child->tagName, $tag_name );
 			if ( $key ) {
 				$data[ $key ] = $child->textContent;
+			} else if ( $child->tagName == 'wp:termmeta' ) {
+				$meta_item = $this->parse_meta_node( $child );
+				if ( ! empty( $meta_item ) ) {
+					$meta[] = $meta_item;
+				}
 			}
 		}
 
@@ -1700,7 +1705,7 @@ class WXR_Importer extends WP_Importer {
 
 		$this->mapping['term'][ $mapping_key ] = $term_id;
 		$this->mapping['term_id'][ $original_id ] = $term_id;
-
+	
 		$this->logger->info( sprintf(
 			__( 'Imported "%s" (%s)', 'wordpress-importer' ),
 			$data['name'],
@@ -1711,6 +1716,8 @@ class WXR_Importer extends WP_Importer {
 			$original_id,
 			$term_id
 		) );
+		
+		$this->process_term_meta( $meta, $term_id, $term );
 
 		do_action( 'wp_import_insert_term', $term_id, $data );
 
@@ -1721,6 +1728,48 @@ class WXR_Importer extends WP_Importer {
 		 * @param array $data Raw data imported for the term.
 		 */
 		do_action( 'wxr_importer.processed.term', $term_id, $data );
+	}
+	
+	/**
+	 * Process and import term meta items.
+	 *
+	 * @param array $meta List of meta data arrays
+	 * @param int $term_id Term ID to associate with
+	 * @param array $term Term data
+	 * @return int|bool Number of meta items imported on success, false otherwise.
+	 */
+	protected function process_term_meta( $meta, $term_id, $term ) {
+		if ( empty( $meta ) ) {
+			return true;
+		}
+	
+		foreach ( $meta as $meta_item ) {
+			/**
+			 * Pre-process term meta data.
+			 *
+			 * @param array $meta_item Meta data. (Return empty to skip.)
+			 * @param int $term_id Term the meta is attached to.
+			 */
+			$meta_item = apply_filters( 'wxr_importer.pre_process.term_meta', $meta_item, $term_id );
+			if ( empty( $meta_item ) ) {
+				return false;
+			}
+	
+			$key = apply_filters( 'import_term_meta_key', $meta_item['key'], $term_id, $term );
+			$value = false;
+
+			if ( $key ) {
+				// export gets meta straight from the DB so could have a serialized string
+				if ( ! $value ) {
+					$value = maybe_unserialize( $meta_item['value'] );
+				}
+	
+				add_term_meta( $term_id, $key, $value );
+				do_action( 'import_term_meta', $term_id, $key, $value );
+			}
+		}
+	
+		return true;
 	}
 
 	/**
