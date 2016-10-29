@@ -1,5 +1,4 @@
 <?php
-
 namespace ProteusThemes\WPContentImporter2;
 
 /**

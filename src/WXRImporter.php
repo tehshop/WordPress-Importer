@@ -1,8 +1,7 @@
 <?php
-
 namespace ProteusThemes\WPContentImporter2;
 
-class WXRImporter extends WP_Importer {
+class WXRImporter extends \WP_Importer {
 	/**
 	 * Maximum supported WXR version
 	 */
@@ -121,7 +120,7 @@ class WXRImporter extends WP_Importer {
 			// $old_value = libxml_disable_entity_loader( true );
 		}
 
-		$reader = new XMLReader();
+		$reader = new \XMLReader();
 		$status = $reader->open( $file );
 
 		if ( ! is_null( $old_value ) ) {
@@ -129,7 +128,7 @@ class WXRImporter extends WP_Importer {
 		}
 
 		if ( ! $status ) {
-			return new WP_Error( 'wxr_importer.cannot_parse', __( 'Could not open the file for parsing', 'wordpress-importer' ) );
+			return new \WP_Error( 'wxr_importer.cannot_parse', __( 'Could not open the file for parsing', 'wordpress-importer' ) );
 		}
 
 		return $reader;
@@ -151,7 +150,7 @@ class WXRImporter extends WP_Importer {
 		$this->version = '1.0';
 
 		// Start parsing!
-		$data = new WXR_Import_Info();
+		$data = new \WXR_Import_Info();
 		while ( $reader->read() ) {
 			// Only deal with element opens
 			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
@@ -503,7 +502,7 @@ class WXRImporter extends WP_Importer {
 	 */
 	protected function import_start( $file ) {
 		if ( ! is_file( $file ) ) {
-			return new WP_Error( 'wxr_importer.file_missing', __( 'The file does not exist, please try again.', 'wordpress-importer' ) );
+			return new \WP_Error( 'wxr_importer.file_missing', __( 'The file does not exist, please try again.', 'wordpress-importer' ) );
 		}
 
 		// Suspend bunches of stuff in WP core
@@ -662,7 +661,7 @@ class WXRImporter extends WP_Importer {
 
 					if ( $data['post_status'] === 'auto-draft' ) {
 						// Bail now
-						return new WP_Error(
+						return new \WP_Error(
 							'wxr_importer.post.cannot_import_draft',
 							__( 'Cannot import auto-draft posts' ),
 							$data
@@ -1035,7 +1034,7 @@ class WXRImporter extends WP_Importer {
 
 		$info = wp_check_filetype( $upload['file'] );
 		if ( ! $info ) {
-			return new WP_Error( 'attachment_processing_error', __( 'Invalid file type', 'wordpress-importer' ) );
+			return new \WP_Error( 'attachment_processing_error', __( 'Invalid file type', 'wordpress-importer' ) );
 		}
 
 		$post['post_mime_type'] = $info['type'];
@@ -1788,7 +1787,7 @@ class WXRImporter extends WP_Importer {
 		// get placeholder file in the upload dir with a unique, sanitized filename
 		$upload = wp_upload_bits( $file_name, 0, '', $post['upload_date'] );
 		if ( $upload['error'] ) {
-			return new WP_Error( 'upload_dir_error', $upload['error'] );
+			return new \WP_Error( 'upload_dir_error', $upload['error'] );
 		}
 
 		// fetch the remote url and write it to the placeholder file
@@ -1808,7 +1807,7 @@ class WXRImporter extends WP_Importer {
 		// make sure the fetch was successful
 		if ( $code !== 200 ) {
 			unlink( $upload['file'] );
-			return new WP_Error(
+			return new \WP_Error(
 				'import_file_error',
 				sprintf(
 					__( 'Remote server returned %1$d %2$s for %3$s', 'wordpress-importer' ),
@@ -1824,19 +1823,19 @@ class WXRImporter extends WP_Importer {
 
 		if ( isset( $headers['content-length'] ) && $filesize !== (int) $headers['content-length'] ) {
 			unlink( $upload['file'] );
-			return new WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
+			return new \WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
 		}
 
 		if ( 0 === $filesize ) {
 			unlink( $upload['file'] );
-			return new WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
+			return new \WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
 		}
 
 		$max_size = (int) $this->max_attachment_size();
 		if ( ! empty( $max_size ) && $filesize > $max_size ) {
 			unlink( $upload['file'] );
 			$message = sprintf( __( 'Remote file is too large, limit is %s', 'wordpress-importer' ), size_format( $max_size ) );
-			return new WP_Error( 'import_file_error', $message );
+			return new \WP_Error( 'import_file_error', $message );
 		}
 
 		return $upload;
