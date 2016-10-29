@@ -150,10 +150,10 @@ class WXRImporter extends \WP_Importer {
 		$this->version = '1.0';
 
 		// Start parsing!
-		$data = new \WXR_Import_Info();
+		$data = new WXRImportInfo();
 		while ( $reader->read() ) {
 			// Only deal with element opens
-			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
+			if ( $reader->nodeType !== \XMLReader::ELEMENT ) {
 				continue;
 			}
 
@@ -269,7 +269,7 @@ class WXRImporter extends \WP_Importer {
 		$authors = array();
 		while ( $reader->read() ) {
 			// Only deal with element opens
-			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
+			if ( $reader->nodeType !== \XMLReader::ELEMENT ) {
 				continue;
 			}
 
@@ -342,7 +342,7 @@ class WXRImporter extends \WP_Importer {
 		// Start parsing!
 		while ( $reader->read() ) {
 			// Only deal with element opens
-			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
+			if ( $reader->nodeType !== \XMLReader::ELEMENT ) {
 				continue;
 			}
 
