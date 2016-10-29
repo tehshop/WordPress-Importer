@@ -1,5 +1,7 @@
 <?php
 
+namespace ProteusThemes\WPContentImporter2;
+
 class WXRImporter extends WP_Importer {
 	/**
 	 * Maximum supported WXR version

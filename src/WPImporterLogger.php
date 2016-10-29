@@ -1,5 +1,7 @@
 <?php
 
+namespace ProteusThemes\WPContentImporter2;
+
 /**
  * Describes a logger instance
  *
