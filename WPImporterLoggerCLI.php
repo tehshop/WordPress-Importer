@@ -1,6 +1,6 @@
 <?php
 
-class WP_Importer_Logger_CLI extends WP_Importer_Logger {
+class WPImporterLoggerCLI extends WPImporterLogger {
 	public $min_level = 'notice';
 
 	/**
