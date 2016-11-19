@@ -907,8 +907,45 @@ class WXRImporter extends \WP_Importer {
 				if ( isset( $this->mapping['term'][ $key ] ) ) {
 					$term_ids[ $taxonomy ][] = (int) $this->mapping['term'][ $key ];
 				} else {
-					$meta[] = array( 'key' => '_wxr_import_term', 'value' => $term );
-					$requires_remapping = true;
+
+					/**
+					 * Fix for the post format "categories".
+					 * The issue in this importer is, that these post formats are misused as categories in WP export
+					 * (as the export data <category> item in the post export item), but they are not actually
+					 * exported as wp:category items in the XML file, so they need to be inserted on the fly (here).
+					 *
+					 * Maybe something better can be done in the future?
+					 *
+					 * Original issue reported here: https://wordpress.org/support/topic/post-format-videoquotegallery-became-format-standard/#post-8447683
+					 *
+					 */
+					if ( 'post_format' === $taxonomy ) {
+						$term_exists = term_exists( $term['slug'], $taxonomy );
+						$term_id = is_array( $term_exists ) ? $term_exists['term_id'] : $term_exists;
+
+						if ( empty( $term_id ) ) {
+							$t = wp_insert_term( $term['name'], $taxonomy, array( 'slug' => $term['slug'] ) );
+							if ( ! is_wp_error( $t ) ) {
+								$term_id = $t['term_id'];
+								$this->mapping['term'][ $key ] = $term_id;
+							} else {
+								$this->logger->warning( sprintf(
+									esc_html__( 'Failed to import term: %s - %s', 'wordpress-importer' ),
+									esc_html( $taxonomy ),
+									esc_html( $term['name'] )
+								) );
+								continue;
+							}
+						}
+
+						if ( ! empty( $term_id ) ) {
+							$term_ids[ $taxonomy ][] = intval( $term_id );
+						}
+					} // End of fix.
+					else {
+						$meta[] = array( 'key' => '_wxr_import_term', 'value' => $term );
+						$requires_remapping = true;
+					}
 				}
 			}
 
