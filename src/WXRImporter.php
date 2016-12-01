@@ -1672,14 +1672,22 @@ class WXRImporter extends \WP_Importer {
 			return false;
 		}
 
-		$original_id = isset( $data['id'] )      ? (int) $data['id']      : 0;
-		$parent_id   = isset( $data['parent'] )  ? (int) $data['parent']  : 0;
+		$original_id = isset( $data['id'] ) ? (int) $data['id'] : 0;
+
+		/* FIX for OCDI!
+		 * As of WP 4.5, export.php returns the SLUG for the term's parent,
+		 * rather than an integer ID (this differs from a post_parent)
+		 * wp_insert_term and wp_update_term use the key: 'parent' and an integer value 'id'
+		 */
+		$term_slug   = isset( $data['slug'] ) ? $data['slug'] : '';
+ 		$parent_slug = isset( $data['parent'] ) ? $data['parent'] : '';
 
 		$mapping_key = sha1( $data['taxonomy'] . ':' . $data['slug'] );
 		$existing = $this->term_exists( $data );
 		if ( $existing ) {
 			$this->mapping['term'][ $mapping_key ] = $existing;
 			$this->mapping['term_id'][ $original_id ] = $existing;
+			$this->mapping['term_slug'][ $term_slug ] = $existing;
 			return false;
 		}
 
@@ -1692,23 +1700,23 @@ class WXRImporter extends \WP_Importer {
 		$allowed = array(
 			'slug' => true,
 			'description' => true,
+			'parent' => true, // The parent_id may have already been set, so pass this back to the newly inserted term.
 		);
 
 		// Map the parent comment, or mark it as one we need to fix
-		// TODO: add parent mapping and remapping
-		/*$requires_remapping = false;
-		if ( $parent_id ) {
-			if ( isset( $this->mapping['term'][ $parent_id ] ) ) {
-				$data['parent'] = $this->mapping['term'][ $parent_id ];
+		$requires_remapping = false;
+		if ( $parent_slug ) {
+			if ( isset( $this->mapping['term_slug'][ $parent_slug ] ) ) {
+				$data['parent'] = $this->mapping['term_slug'][ $parent_slug ];
 			} else {
 				// Prepare for remapping later
-				$meta[] = array( 'key' => '_wxr_import_parent', 'value' => $parent_id );
+				$meta[] = array( 'key' => '_wxr_import_parent', 'value' => $parent_slug );
 				$requires_remapping = true;
 
-				// Wipe the parent for now
+				// Wipe the parent id for now
 				$data['parent'] = 0;
 			}
-		}*/
+		}
 
 		foreach ( $data as $key => $value ) {
 			if ( ! isset( $allowed[ $key ] ) ) {
@@ -1741,8 +1749,40 @@ class WXRImporter extends \WP_Importer {
 
 		$term_id = $result['term_id'];
 
+		// Now prepare to map this new term.
 		$this->mapping['term'][ $mapping_key ] = $term_id;
 		$this->mapping['term_id'][ $original_id ] = $term_id;
+		$this->mapping['term_slug'][ $term_slug ] = $term_id;
+
+		/*
+		 * Fix for OCDI!
+		 * The parent will be updated later in post_process_terms
+		 * we will need both the term_id AND the term_taxonomy to retrieve existing
+		 * term attributes. Those attributes will be returned with the corrected parent,
+		 * using wp_update_term.
+		 * Pass both the term_id along with the term_taxonomy as key=>value
+		 * in the requires_remapping['term'] array.
+		 */
+		if ( $requires_remapping ) {
+			$this->requires_remapping['term'][ $term_id ] = $data['taxonomy'];
+		}
+
+		// Insert termmeta, if any, including the flag to remap the parent '_wxr_import_parent'.
+		if( ! empty( $meta ) ){
+			foreach ( $meta as $meta_item ){
+				$result = add_term_meta ( $term_id, $meta_item['key'], $meta_item['value'] );
+				if ( is_wp_error( $result ) ) {
+					$this->logger->warning( sprintf(
+						__( 'Failed to add metakey: %s, metavalue: %s to term_id: %d', 'wordpress-importer' ),
+						 $meta_item['key'], $meta_item['value'], $term_id ) );
+						 do_action( 'wxr_importer.process_failed.termmeta', $result, $data, $meta );
+				 } else {
+					$this->logger->debug( sprintf(
+						__( 'Meta for term_id %d : %s => %s ; successfully added!', 'wordpress-importer' ),
+						$term_id, $meta_key, $meta_value ) );
+				}
+			}
+		}
 
 		$this->logger->info( sprintf(
 			__( 'Imported "%s" (%s)', 'wordpress-importer' ),
@@ -1885,6 +1925,9 @@ class WXRImporter extends \WP_Importer {
 		}
 		if ( ! empty( $this->requires_remapping['comment'] ) ) {
 			$this->post_process_comments( $this->requires_remapping['comment'] );
+		}
+		if ( ! empty( $this->requires_remapping['term'] ) ) {
+			$this->post_process_terms( $this->requires_remapping['term'] );
 		}
 	}
 
@@ -2089,6 +2132,103 @@ class WXRImporter extends \WP_Importer {
 			delete_comment_meta( $comment_id, '_wxr_import_user' );
 		}
 	}
+
+
+	/**
+	 * There is no explicit 'top' or 'root' for a hierarchy of WordPress terms
+	 * Terms without a parent, or parent=0 are either unconnected (orphans)
+	 * or top-level siblings without an explicit root parent
+	 * An unconnected term (orphan) should have a null parent_slug
+	 * Top-level siblings without an explicit root parent, shall be identified
+	 * with the parent_slug: top
+	 * [we'll map parent_slug: top into parent 0]
+	 */
+	protected function post_process_terms( $terms_to_be_remapped ) {
+		$this->mapping['term_slug']['top'] = 0;
+		// The term_id and term_taxonomy are passed-in with $this->requires_remapping['term'].
+		foreach ( $terms_to_be_remapped as $termid => $term_taxonomy ) {
+			// Basic check.
+			if( empty( $termid ) || ! is_numeric( $termid ) ) {
+				$this->logger->warning( sprintf(
+					__( 'Faulty term_id provided in terms-to-be-remapped array %s', 'wordpress-importer' ),
+					$termid
+					) );
+				continue;
+			}
+			// This cast to integer may be unnecessary.
+			$term_id = (int) $termid;
+
+			if( empty( $term_taxonomy ) ){
+				$this->logger->warning( sprintf(
+					__( 'No taxonomy provided in terms-to-be-remapped array for term #%d', 'wordpress-importer' ),
+					$term_id
+					) );
+				continue;
+			}
+
+			$data = array();
+			$parent_slug = get_term_meta( $term_id, '_wxr_import_parent', true );
+
+			if ( empty( $parent_slug ) ) {
+				$this->logger->warning( sprintf(
+					__( 'No parent_slug identified in remapping-array for term: %d', 'wordpress-importer' ),
+					$term_id
+					) );
+				continue;
+			}
+
+			if ( ! isset( $this->mapping['term_slug'][ $parent_slug ] ) || ! is_numeric( $this->mapping['term_slug'][ $parent_slug ] ) ) {
+				$this->logger->warning( sprintf(
+					__( 'The term(%d)"s parent_slug (%s) is not found in the remapping-array.', 'wordpress-importer' ),
+					$term_id,
+					$parent_slug
+					) );
+				continue;
+			}
+
+			$mapped_parent = (int) $this->mapping['term_slug'][ $parent_slug ];
+
+			$termattributes = get_term_by( 'id', $term_id, $term_taxonomy, ARRAY_A );
+			// Note: the default OBJECT return results in a reserved-word clash with 'parent' [$termattributes->parent], so instead return an associative array.
+
+			if ( empty( $termattributes ) ) {
+				$this->logger->warning( sprintf(
+					__( 'No data returned by get_term_by for term_id #%d', 'wordpress-importer' ),
+					$term_id
+					) );
+				continue;
+			}
+			// Check if the correct parent id is already correctly mapped.
+			if ( isset( $termattributes['parent'] ) &&  $termattributes['parent'] == $mapped_parent ) {
+				// Clear out our temporary meta key.
+				delete_term_meta( $term_id, '_wxr_import_parent' );
+				continue;
+			}
+
+			// Otherwise set the mapped parent and update the term.
+			$termattributes['parent'] = $mapped_parent;
+
+			$result = wp_update_term( $term_id, $termattributes['taxonomy'], $termattributes );
+
+			if ( is_wp_error( $result ) ) {
+			$this->logger->warning( sprintf(
+					__( 'Could not update "%s" (term #%d) with mapped data', 'wordpress-importer' ),
+					$termattributes['name'],
+					$term_id
+				) );
+				$this->logger->debug( $result->get_error_message() );
+				continue;
+			}
+			// Clear out our temporary meta key.
+			delete_term_meta( $term_id, '_wxr_import_parent' );
+			$this->logger->debug( sprintf(
+				__( 'Term %d was successfully updated with parent %d', 'wordpress-importer' ),
+				$term_id,
+				$mapped_parent
+			) );
+		}
+	}
+
 
 	/**
 	 * Use stored mapping information to update old attachment URLs
