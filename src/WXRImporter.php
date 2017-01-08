@@ -1767,23 +1767,6 @@ class WXRImporter extends \WP_Importer {
 			$this->requires_remapping['term'][ $term_id ] = $data['taxonomy'];
 		}
 
-		// Insert termmeta, if any, including the flag to remap the parent '_wxr_import_parent'.
-		if( ! empty( $meta ) ){
-			foreach ( $meta as $meta_item ){
-				$result = add_term_meta ( $term_id, $meta_item['key'], $meta_item['value'] );
-				if ( is_wp_error( $result ) ) {
-					$this->logger->warning( sprintf(
-						__( 'Failed to add metakey: %s, metavalue: %s to term_id: %d', 'wordpress-importer' ),
-						 $meta_item['key'], $meta_item['value'], $term_id ) );
-						 do_action( 'wxr_importer.process_failed.termmeta', $result, $data, $meta );
-				 } else {
-					$this->logger->debug( sprintf(
-						__( 'Meta for term_id %d : %s => %s ; successfully added!', 'wordpress-importer' ),
-						$term_id, $meta_key, $meta_value ) );
-				}
-			}
-		}
-
 		$this->logger->info( sprintf(
 			__( 'Imported "%s" (%s)', 'wordpress-importer' ),
 			$data['name'],
@@ -1795,7 +1778,8 @@ class WXRImporter extends \WP_Importer {
 			$term_id
 		) );
 
-		$this->process_term_meta( $meta, $term_id, $term );
+		// Actuall process of the term meta data.
+		$this->process_term_meta( $meta, $term_id, $data );
 
 		do_action( 'wp_import_insert_term', $term_id, $data );
 
@@ -1829,20 +1813,40 @@ class WXRImporter extends \WP_Importer {
 			 * @param int $term_id Term the meta is attached to.
 			 */
 			$meta_item = apply_filters( 'wxr_importer.pre_process.term_meta', $meta_item, $term_id );
+
 			if ( empty( $meta_item ) ) {
-				return false;
+				continue;
 			}
 
 			$key = apply_filters( 'import_term_meta_key', $meta_item['key'], $term_id, $term );
 			$value = false;
 
 			if ( $key ) {
-				// export gets meta straight from the DB so could have a serialized string
+				// Export gets meta straight from the DB so could have a serialized string.
 				if ( ! $value ) {
 					$value = maybe_unserialize( $meta_item['value'] );
 				}
 
-				add_term_meta( $term_id, $key, $value );
+				$result = add_term_meta( $term_id, $key, $value );
+
+				if ( is_wp_error( $result ) ) {
+					$this->logger->warning( sprintf(
+						__( 'Failed to add metakey: %s, metavalue: %s to term_id: %d', 'wordpress-importer' ),
+						$key,
+						$value,
+						$term_id
+					) );
+					do_action( 'wxr_importer.process_failed.termmeta', $result, $meta_item, $term_id, $term );
+				}
+				else {
+					$this->logger->debug( sprintf(
+						__( 'Meta for term_id %d : %s => %s ; successfully added!', 'wordpress-importer' ),
+						$term_id,
+						$key,
+						$value
+					) );
+				}
+
 				do_action( 'import_term_meta', $term_id, $key, $value );
 			}
 		}
