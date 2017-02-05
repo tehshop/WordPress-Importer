@@ -1019,7 +1019,7 @@ class WXRImporter extends \WP_Importer {
 
 			default:
 				// associated object is missing or not imported yet, we'll retry later
-				$this->missing_menu_items[] = $item;
+				$this->missing_menu_items[] = $data;
 				$this->logger->debug( 'Unknown menu item type' );
 				break;
 		}
