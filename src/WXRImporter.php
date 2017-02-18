@@ -2343,6 +2343,8 @@ class WXRImporter extends \WP_Importer {
 		$exists_key = $data['guid'];
 
 		if ( $this->options['prefill_existing_posts'] ) {
+			// OCDI: fix for custom post types. The guids in the prefilled section are escaped, so these ones should be as well.
+			$exists_key = htmlentities( $exists_key );
 			return isset( $this->exists['post'][ $exists_key ] ) ? $this->exists['post'][ $exists_key ] : false;
 		}
 
