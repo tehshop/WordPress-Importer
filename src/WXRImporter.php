@@ -475,7 +475,8 @@ class WXRImporter extends \WP_Importer {
 		if ( $this->options['aggressive_url_search'] ) {
 			$this->replace_attachment_urls_in_content();
 		}
-		// $this->remap_featured_images();
+
+		$this->remap_featured_images();
 
 		$this->import_end();
 	}
@@ -2261,13 +2262,21 @@ class WXRImporter extends \WP_Importer {
 	 * Update _thumbnail_id meta to new, imported attachment IDs
 	 */
 	function remap_featured_images() {
-		// cycle through posts that have a featured image
-		foreach ( $this->featured_images as $post_id => $value ) {
-			if ( isset( $this->processed_posts[ $value ] ) ) {
-				$new_id = $this->processed_posts[ $value ];
+		if ( empty( $this->featured_images ) ) {
+			return;
+		}
 
-				// only update if there's a difference
+		$this->logger->info( esc_html__( 'Starting remapping of featured images', 'wordpress-importer' ) );
+
+		// Cycle through posts that have a featured image.
+		foreach ( $this->featured_images as $post_id => $value ) {
+			if ( isset( $this->mapping['post'][ $value ] ) ) {
+				$new_id = $this->mapping['post'][ $value ];
+
+				// Only update if there's a difference.
 				if ( $new_id !== $value ) {
+					$this->logger->info( sprintf( esc_html__( 'Remapping featured image ID %d to new ID %d for post ID %d', 'wordpress-importer' ), $value, $new_id, $post_id ) );
+
 					update_post_meta( $post_id, '_thumbnail_id', $new_id );
 				}
 			}
