@@ -1902,6 +1902,15 @@ class WXRImporter extends \WP_Importer {
 		$filesize = filesize( $upload['file'] );
 		$headers = wp_remote_retrieve_headers( $response );
 
+		// OCDI fix!
+		// Smaller images with server compression do not pass this rule.
+		// More info here: https://github.com/proteusthemes/WordPress-Importer/pull/2
+		//
+		// if ( isset( $headers['content-length'] ) && $filesize !== (int) $headers['content-length'] ) {
+		// 	unlink( $upload['file'] );
+		// 	return new \WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
+		// }
+
 		if ( 0 === $filesize ) {
 			unlink( $upload['file'] );
 			return new \WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
