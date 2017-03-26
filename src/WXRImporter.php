@@ -1902,11 +1902,6 @@ class WXRImporter extends \WP_Importer {
 		$filesize = filesize( $upload['file'] );
 		$headers = wp_remote_retrieve_headers( $response );
 
-		if ( isset( $headers['content-length'] ) && $filesize !== (int) $headers['content-length'] ) {
-			unlink( $upload['file'] );
-			return new \WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
-		}
-
 		if ( 0 === $filesize ) {
 			unlink( $upload['file'] );
 			return new \WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
