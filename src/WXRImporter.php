@@ -1141,7 +1141,7 @@ class WXRImporter extends \WP_Importer {
 			}
 		}
 
-		if ( empty( $key ) || empty( $value ) ) {
+		if ( empty( $key ) || ! isset( $value ) ) {
 			return null;
 		}
 
