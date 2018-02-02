@@ -1,6 +1,9 @@
 <?php
 namespace ProteusThemes\WPContentImporter2;
 
+use WP_Error;
+use XMLReader;
+
 class WXRImporter extends \WP_Importer {
 	/**
 	 * Maximum supported WXR version
@@ -49,6 +52,7 @@ class WXRImporter extends \WP_Importer {
 	protected $missing_menu_items = array();
 
 	// NEW STYLE
+	public $options = array();
 	protected $mapping = array();
 	protected $requires_remapping = array();
 	protected $exists = array();
@@ -60,7 +64,7 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Logger instance.
 	 *
-	 * @var WP_Importer_Logger
+	 * @var WPImporterLogger
 	 */
 	protected $logger;
 
@@ -71,7 +75,7 @@ class WXRImporter extends \WP_Importer {
 	 *     @var bool $prefill_existing_posts Should we prefill `post_exists` calls? (True prefills and uses more memory, false checks once per imported post and takes longer. Default is true.)
 	 *     @var bool $prefill_existing_comments Should we prefill `comment_exists` calls? (True prefills and uses more memory, false checks once per imported comment and takes longer. Default is true.)
 	 *     @var bool $prefill_existing_terms Should we prefill `term_exists` calls? (True prefills and uses more memory, false checks once per imported term and takes longer. Default is true.)
-	 *     @var bool $update_attachment_guids Should attachment GUIDs be updated to the new URL? (True updates the GUID, which keeps compatibility with v1, false doesn't update, and allows deduplication and reimporting. Default is false.)
+	 *     @var bool $update_attachment_guids Should attachment GUIDs be updated to the new URL? (True updates the GUID, which keeps compatibility with v1, false doesn't update, and allows duplication and reimporting. Default is false.)
 	 *     @var bool $fetch_attachments Fetch attachments from the remote server. (True fetches and creates attachment posts, false skips attachments. Default is false.)
 	 *     @var bool $aggressive_url_search Should we search/replace for URLs aggressively? (True searches all posts' content for old URLs and replaces, false checks for `<img class="wp-image-*">` only. Default is false.)
 	 *     @var int $default_author User ID to use if author is missing or invalid. (Default is null, which leaves posts unassigned.)
@@ -120,7 +124,7 @@ class WXRImporter extends \WP_Importer {
 			// $old_value = libxml_disable_entity_loader( true );
 		}
 
-		$reader = new \XMLReader();
+		$reader = new XMLReader();
 		$status = $reader->open( $file );
 
 		if ( ! is_null( $old_value ) ) {
@@ -128,7 +132,7 @@ class WXRImporter extends \WP_Importer {
 		}
 
 		if ( ! $status ) {
-			return new \WP_Error( 'wxr_importer.cannot_parse', __( 'Could not open the file for parsing', 'wordpress-importer' ) );
+			return new WP_Error( 'wxr_importer.cannot_parse', __( 'Could not open the file for parsing', 'wordpress-importer' ) );
 		}
 
 		return $reader;
@@ -138,6 +142,8 @@ class WXRImporter extends \WP_Importer {
 	 * The main controller for the actual import stage.
 	 *
 	 * @param string $file Path to the WXR file for importing
+	 *
+	 * @return WXRImportInfo|WP_Error
 	 */
 	public function get_preliminary_information( $file ) {
 		// Let's run the actual importer now, woot
@@ -153,7 +159,7 @@ class WXRImporter extends \WP_Importer {
 		$data = new WXRImportInfo();
 		while ( $reader->read() ) {
 			// Only deal with element opens
-			if ( $reader->nodeType !== \XMLReader::ELEMENT ) {
+			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
 				continue;
 			}
 
@@ -254,6 +260,8 @@ class WXRImporter extends \WP_Importer {
 	 * The main controller for the actual import stage.
 	 *
 	 * @param string $file Path to the WXR file for importing
+	 *
+	 * @return array|WP_Error
 	 */
 	public function parse_authors( $file ) {
 		// Let's run the actual importer now, woot
@@ -269,7 +277,7 @@ class WXRImporter extends \WP_Importer {
 		$authors = array();
 		while ( $reader->read() ) {
 			// Only deal with element opens
-			if ( $reader->nodeType !== \XMLReader::ELEMENT ) {
+			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
 				continue;
 			}
 
@@ -316,7 +324,7 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * The main controller for the actual import stage.
 	 *
-	 * @param string $file Path to the WXR file for importing
+	 * @param string $file Path to the WXR file for importing.
 	 */
 	public function import( $file ) {
 		add_filter( 'import_post_meta_key', array( $this, 'is_valid_meta_key' ) );
@@ -342,7 +350,7 @@ class WXRImporter extends \WP_Importer {
 		// Start parsing!
 		while ( $reader->read() ) {
 			// Only deal with element opens
-			if ( $reader->nodeType !== \XMLReader::ELEMENT ) {
+			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
 				continue;
 			}
 
@@ -503,7 +511,7 @@ class WXRImporter extends \WP_Importer {
 	 */
 	protected function import_start( $file ) {
 		if ( ! is_file( $file ) ) {
-			return new \WP_Error( 'wxr_importer.file_missing', __( 'The file does not exist, please try again.', 'wordpress-importer' ) );
+			return new WP_Error( 'wxr_importer.file_missing', __( 'The file does not exist, please try again.', 'wordpress-importer' ) );
 		}
 
 		// Suspend bunches of stuff in WP core
@@ -593,7 +601,7 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Parse a post node into post data.
 	 *
-	 * @param DOMElement $node Parent node of post data (typically `item`).
+	 * @param \DOMNode $node Parent node of post data (typically `item`).
 	 * @return array|WP_Error Post data array on success, error otherwise.
 	 */
 	protected function parse_post_node( $node ) {
@@ -662,7 +670,7 @@ class WXRImporter extends \WP_Importer {
 
 					if ( $data['post_status'] === 'auto-draft' ) {
 						// Bail now
-						return new \WP_Error(
+						return new WP_Error(
 							'wxr_importer.post.cannot_import_draft',
 							__( 'Cannot import auto-draft posts' ),
 							$data
@@ -723,6 +731,11 @@ class WXRImporter extends \WP_Importer {
 	 * Doesn't create a new post if: the post type doesn't exist, the given post ID
 	 * is already noted as imported or a post with the same title and date already exists.
 	 * Note that new/updated terms, comments and meta are imported for the last of the above.
+	 *
+	 * @param array $data     Post data.
+	 * @param array $meta     Meta data.
+	 * @param array $comments Comments on the post.
+	 * @param array $terms    Terms on the post.
 	 */
 	protected function process_post( $data, $meta, $comments, $terms ) {
 		/**
@@ -740,11 +753,10 @@ class WXRImporter extends \WP_Importer {
 
 		$original_id = isset( $data['post_id'] )     ? (int) $data['post_id']     : 0;
 		$parent_id   = isset( $data['post_parent'] ) ? (int) $data['post_parent'] : 0;
-		$author_id   = isset( $data['post_author'] ) ? (int) $data['post_author'] : 0;
 
 		// Have we already processed this?
 		if ( isset( $this->mapping['post'][ $original_id ] ) ) {
-			return;
+			return false;
 		}
 
 		$post_type_object = get_post_type_object( $data['post_type'] );
@@ -983,7 +995,9 @@ class WXRImporter extends \WP_Importer {
 	 * represents doesn't exist then the menu item will not be imported (waits until the
 	 * end of the import to retry again before discarding).
 	 *
-	 * @param array $item Menu item details from WXR file
+	 * @param int $post_id Menu item post ID.
+	 * @param array $data  Menu item details from WXR file.
+	 * @param array $meta  Menu item meta details.
 	 */
 	protected function process_menu_item_meta( $post_id, $data, $meta ) {
 
@@ -1041,8 +1055,10 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * If fetching attachments is enabled then attempt to create a new attachment
 	 *
-	 * @param array $post Attachment post details from WXR
-	 * @param string $url URL to fetch attachment from
+	 * @param array  $post       Attachment post details from WXR.
+	 * @param array  $meta       Attachment post meta details.
+	 * @param string $remote_url URL to fetch attachment from.
+	 *
 	 * @return int|WP_Error Post ID on success, WP_Error otherwise
 	 */
 	protected function process_attachment( $post, $meta, $remote_url ) {
@@ -1072,7 +1088,7 @@ class WXRImporter extends \WP_Importer {
 
 		$info = wp_check_filetype( $upload['file'] );
 		if ( ! $info ) {
-			return new \WP_Error( 'attachment_processing_error', __( 'Invalid file type', 'wordpress-importer' ) );
+			return new WP_Error( 'attachment_processing_error', __( 'Invalid file type', 'wordpress-importer' ) );
 		}
 
 		$post['post_mime_type'] = $info['type'];
@@ -1120,7 +1136,7 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Parse a meta node into meta data.
 	 *
-	 * @param DOMElement $node Parent node of meta data (typically `wp:postmeta` or `wp:commentmeta`).
+	 * @param \DOMNode $node Parent node of meta data (typically `wp:postmeta` or `wp:commentmeta`).
 	 * @return array|null Meta data array on success, or null on error.
 	 */
 	protected function parse_meta_node( $node ) {
@@ -1208,7 +1224,7 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Parse a comment node into comment data.
 	 *
-	 * @param DOMElement $node Parent node of comment data (typically `wp:comment`).
+	 * @param \DOMNode $node Parent node of comment data (typically `wp:comment`).
 	 * @return array Comment data array.
 	 */
 	protected function parse_comment_node( $node ) {
@@ -1285,9 +1301,11 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Process and import comment data.
 	 *
-	 * @param array $comments List of comment data arrays.
-	 * @param int $post_id Post to associate with.
-	 * @param array $post Post data.
+	 * @param array   $comments    List of comment data arrays.
+	 * @param int     $post_id     Post to associate with.
+	 * @param array   $post        Post data.
+	 * @param boolean $post_exists Boolean if the post already exists.
+	 *
 	 * @return int|WP_Error Number of comments imported on success, error otherwise.
 	 */
 	protected function process_comments( $comments, $post_id, $post, $post_exists = false ) {
@@ -1405,6 +1423,13 @@ class WXRImporter extends \WP_Importer {
 		return $num_comments;
 	}
 
+	/**
+	 * Parse the category node.
+	 *
+	 * @param \DOMNode $node The category node.
+	 *
+	 * @return array|null
+	 */
 	protected function parse_category_node( $node ) {
 		$data = array(
 			// Default taxonomy to "category", since this is a `<category>` tag
@@ -1438,6 +1463,7 @@ class WXRImporter extends \WP_Importer {
 	 *
 	 * @param array $a Comment data for the first comment
 	 * @param array $b Comment data for the second comment
+	 *
 	 * @return int
 	 */
 	public static function sort_comments_by_id( $a, $b ) {
@@ -1491,6 +1517,12 @@ class WXRImporter extends \WP_Importer {
 		return compact( 'data', 'meta' );
 	}
 
+	/**
+	 * Process author.
+	 *
+	 * @param array $data The author data from WXR file.
+	 * @param array $meta The author meta data from WXR file.
+	 */
 	protected function process_author( $data, $meta ) {
 		/**
 		 * Pre-process user data.
@@ -1595,6 +1627,15 @@ class WXRImporter extends \WP_Importer {
 		do_action( 'wxr_importer.processed.user', $user_id, $userdata );
 	}
 
+
+	/**
+	 * Parse term node.
+	 *
+	 * @param \DOMNode $node The term node from WXR file.
+	 * @param string   $type The type of the term node.
+	 *
+	 * @return array|null
+	 */
 	protected function parse_term_node( $node, $type = 'term' ) {
 		$data = array();
 		$meta = array();
@@ -1661,6 +1702,12 @@ class WXRImporter extends \WP_Importer {
 		return compact( 'data', 'meta' );
 	}
 
+	/**
+	 * Process term.
+	 *
+	 * @param array $data The term data from WXR file.
+	 * @param array $meta The term meta data from WXR file.
+	 */
 	protected function process_term( $data, $meta ) {
 		/**
 		 * Pre-process term data.
@@ -1796,9 +1843,10 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Process and import term meta items.
 	 *
-	 * @param array $meta List of meta data arrays
-	 * @param int $term_id Term ID to associate with
-	 * @param array $term Term data
+	 * @param array $meta    List of meta data arrays.
+	 * @param int   $term_id Term ID to associate with.
+	 * @param array $term    Term data.
+	 *
 	 * @return int|bool Number of meta items imported on success, false otherwise.
 	 */
 	protected function process_term_meta( $meta, $term_id, $term ) {
@@ -1856,10 +1904,11 @@ class WXRImporter extends \WP_Importer {
 	}
 
 	/**
-	 * Attempt to download a remote file attachment
+	 * Attempt to download a remote file attachment.
 	 *
-	 * @param string $url URL of item to fetch
-	 * @param array $post Attachment details
+	 * @param string $url  URL of item to fetch.
+	 * @param array  $post Attachment details.
+	 *
 	 * @return array|WP_Error Local file location details on success, WP_Error otherwise
 	 */
 	protected function fetch_remote_file( $url, $post ) {
@@ -1869,7 +1918,7 @@ class WXRImporter extends \WP_Importer {
 		// get placeholder file in the upload dir with a unique, sanitized filename
 		$upload = wp_upload_bits( $file_name, 0, '', $post['upload_date'] );
 		if ( $upload['error'] ) {
-			return new \WP_Error( 'upload_dir_error', $upload['error'] );
+			return new WP_Error( 'upload_dir_error', $upload['error'] );
 		}
 
 		// fetch the remote url and write it to the placeholder file
@@ -1889,7 +1938,7 @@ class WXRImporter extends \WP_Importer {
 		// make sure the fetch was successful
 		if ( $code !== 200 ) {
 			unlink( $upload['file'] );
-			return new \WP_Error(
+			return new WP_Error(
 				'import_file_error',
 				sprintf(
 					__( 'Remote server returned %1$d %2$s for %3$s', 'wordpress-importer' ),
@@ -1909,19 +1958,19 @@ class WXRImporter extends \WP_Importer {
 		//
 		// if ( isset( $headers['content-length'] ) && $filesize !== (int) $headers['content-length'] ) {
 		// 	unlink( $upload['file'] );
-		// 	return new \WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
+		// 	return new WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
 		// }
 
 		if ( 0 === $filesize ) {
 			unlink( $upload['file'] );
-			return new \WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
+			return new WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
 		}
 
 		$max_size = (int) $this->max_attachment_size();
 		if ( ! empty( $max_size ) && $filesize > $max_size ) {
 			unlink( $upload['file'] );
 			$message = sprintf( __( 'Remote file is too large, limit is %s', 'wordpress-importer' ), size_format( $max_size ) );
-			return new \WP_Error( 'import_file_error', $message );
+			return new WP_Error( 'import_file_error', $message );
 		}
 
 		return $upload;
@@ -2151,6 +2200,8 @@ class WXRImporter extends \WP_Importer {
 	 * Top-level siblings without an explicit root parent, shall be identified
 	 * with the parent_slug: top
 	 * [we'll map parent_slug: top into parent 0]
+	 *
+	 * @param array $terms_to_be_remapped The terms to be remapped.
 	 */
 	protected function post_process_terms( $terms_to_be_remapped ) {
 		$this->mapping['term_slug']['top'] = 0;
@@ -2175,7 +2226,6 @@ class WXRImporter extends \WP_Importer {
 				continue;
 			}
 
-			$data = array();
 			$parent_slug = get_term_meta( $term_id, '_wxr_import_parent', true );
 
 			if ( empty( $parent_slug ) ) {
@@ -2254,7 +2304,7 @@ class WXRImporter extends \WP_Importer {
 
 			// remap enclosure urls
 			$query = $wpdb->prepare( "UPDATE {$wpdb->postmeta} SET meta_value = REPLACE(meta_value, %s, %s) WHERE meta_key='enclosure'", $from_url, $to_url );
-			$result = $wpdb->query( $query );
+			$wpdb->query( $query );
 		}
 	}
 
@@ -2312,6 +2362,7 @@ class WXRImporter extends \WP_Importer {
 	/**
 	 * Added to http_request_timeout filter to force timeout at 60 seconds during import
 	 *
+	 * @param int $val Time in seconds.
 	 * @access protected
 	 * @return int 60
 	 */
