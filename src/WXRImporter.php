@@ -2175,7 +2175,7 @@ class WXRImporter extends \WP_Importer {
 			}
 
 			// Run the update
-			$data['comment_ID'] = $comment_ID;
+			$data['comment_ID'] = $comment_id;
 			$result = wp_update_comment( wp_slash( $data ) );
 			if ( empty( $result ) ) {
 				$this->logger->warning( sprintf(
