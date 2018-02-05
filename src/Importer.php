@@ -373,4 +373,49 @@ class Importer extends WXRImporter {
 
 		return true;
 	}
+
+	/**
+	 * Import users only.
+	 *
+	 * @param string $file Path to the import file.
+	 */
+	public function import_users( $file ) {
+		$this->import( $file, array( 'users' => true ) );
+	}
+
+	/**
+	 * Import categories only.
+	 *
+	 * @param string $file Path to the import file.
+	 */
+	public function import_categories( $file ) {
+		$this->import( $file, array( 'categories' => true ) );
+	}
+
+	/**
+	 * Import tags only.
+	 *
+	 * @param string $file Path to the import file.
+	 */
+	public function import_tags( $file ) {
+		$this->import( $file, array( 'tags' => true ) );
+	}
+
+	/**
+	 * Import terms only.
+	 *
+	 * @param string $file Path to the import file.
+	 */
+	public function import_terms( $file ) {
+		$this->import( $file, array( 'terms' => true ) );
+	}
+
+	/**
+	 * Import posts only.
+	 *
+	 * @param string $file Path to the import file.
+	 */
+	public function import_posts( $file ) {
+		$this->import( $file, array( 'posts' => true ) );
+	}
 }
