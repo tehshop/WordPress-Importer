@@ -11,6 +11,13 @@ use XMLReader;
 class Importer extends WXRImporter {
 
 	/**
+	 * Time in milliseconds, marking the beginning of the import.
+	 *
+	 * @var float
+	 */
+	private $start_time;
+
+	/**
 	 * Importer constructor.
 	 * Look at the parent constructor for the options parameters.
 	 *
@@ -170,6 +177,8 @@ class Importer extends WXRImporter {
 	public function import( $file, $options = array() ) {
 		add_filter( 'import_post_meta_key', array( $this, 'is_valid_meta_key' ) );
 		add_filter( 'http_request_timeout', array( &$this, 'bump_request_timeout' ) );
+
+		$this->start_time = microtime( true );
 
 		// Set the import options defaults.
 		if ( empty( $options ) ) {
@@ -417,5 +426,60 @@ class Importer extends WXRImporter {
 	 */
 	public function import_posts( $file ) {
 		$this->import( $file, array( 'posts' => true ) );
+	}
+
+	/**
+	 * Check if we need to create a new AJAX request, so that server does not timeout.
+	 *
+	 * @param array $data current post data.
+	 * @return array
+	 */
+	public function new_ajax_request_maybe( $data ) {
+		$time = microtime( true ) - $this->start_time;
+
+		// We should make a new ajax call, if the time is right.
+		if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 25 ) ) {
+			$response = array(
+				'status'  => 'newAJAX',
+				'message' => 'Time for new AJAX request!: ' . $time,
+			);
+
+			// Add message to log file.
+			$this->logger->info( __( 'New AJAX call!', 'wordpress-importer' ) );
+
+			// Set the current importer stat, so it can be continued on the next AJAX call.
+			$this->set_current_importer_data();
+
+			// Send the request for a new AJAX call.
+			wp_send_json( $response );
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Save current importer data to the DB, for later use.
+	 */
+	public function set_current_importer_data() {
+		$data = apply_filters( 'pt-importer/set_current_importer_data', array(
+			'options'            => $this->options,
+			'mapping'            => $this->mapping,
+			'requires_remapping' => $this->requires_remapping,
+			'exists'             => $this->exists,
+			'user_slug_override' => $this->user_slug_override,
+			'url_remap'          => $this->url_remap,
+			'featured_images'    => $this->featured_images,
+		) );
+
+		$this->save_current_import_data_transient( $data );
+	}
+
+	/**
+	 * Set the importer data to the transient.
+	 *
+	 * @param array $data Data to be saved to the transient.
+	 */
+	public function save_current_import_data_transient( $data ) {
+		set_transient( 'pt_importer_data', $data, MINUTE_IN_SECONDS );
 	}
 }
