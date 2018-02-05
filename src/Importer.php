@@ -439,7 +439,7 @@ class Importer extends WXRImporter {
 		$time = microtime( true ) - $this->start_time;
 
 		// We should make a new ajax call, if the time is right.
-		if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 25 ) ) {
+		if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 20 ) ) {
 			$response = array(
 				'status'  => 'newAJAX',
 				'message' => 'Time for new AJAX request!: ' . $time,
