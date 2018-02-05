@@ -181,6 +181,9 @@ class Importer extends WXRImporter {
 		// Start the import timer.
 		$this->start_time = microtime( true );
 
+		// Set the existing import data, from previous AJAX call, if any.
+		$this->restore_import_data_transient();
+
 		// Set the import options defaults.
 		if ( empty( $options ) ) {
 			$options = array(
@@ -482,5 +485,28 @@ class Importer extends WXRImporter {
 	 */
 	public function save_current_import_data_transient( $data ) {
 		set_transient( 'pt_importer_data', $data, MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Restore the importer data from the transient.
+	 *
+	 * @return boolean
+	 */
+	public function restore_import_data_transient() {
+		if ( $data = get_transient( 'pt_importer_data' ) ) {
+			$this->options            = empty( $data['options'] ) ? array() : $data['options'];
+			$this->mapping            = empty( $data['mapping'] ) ? array() : $data['mapping'];
+			$this->requires_remapping = empty( $data['requires_remapping'] ) ? array() : $data['requires_remapping'];
+			$this->exists             = empty( $data['exists'] ) ? array() : $data['exists'];
+			$this->user_slug_override = empty( $data['user_slug_override'] ) ? array() : $data['user_slug_override'];
+			$this->url_remap          = empty( $data['url_remap'] ) ? array() : $data['url_remap'];
+			$this->featured_images    = empty( $data['featured_images'] ) ? array() : $data['featured_images'];
+
+			add_action( 'pt-importer/restore_import_data_transient' );
+
+			return true;
+		}
+
+		return false;
 	}
 }
