@@ -546,6 +546,7 @@ class WXRImporter extends \WP_Importer {
 		// Re-enable stuff in core
 		wp_suspend_cache_invalidation( false );
 		wp_cache_flush();
+
 		foreach ( get_taxonomies() as $tax ) {
 			delete_option( "{$tax}_children" );
 			_get_term_hierarchy( $tax );
@@ -553,6 +554,8 @@ class WXRImporter extends \WP_Importer {
 
 		wp_defer_term_counting( false );
 		wp_defer_comment_counting( false );
+
+		flush_rewrite_rules();
 
 		/**
 		 * Complete the import.
