@@ -178,6 +178,7 @@ class Importer extends WXRImporter {
 		add_filter( 'import_post_meta_key', array( $this, 'is_valid_meta_key' ) );
 		add_filter( 'http_request_timeout', array( &$this, 'bump_request_timeout' ) );
 
+		// Start the import timer.
 		$this->start_time = microtime( true );
 
 		// Set the import options defaults.
