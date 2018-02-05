@@ -389,7 +389,7 @@ class Importer extends WXRImporter {
 	 * @param string $file Path to the import file.
 	 */
 	public function import_users( $file ) {
-		$this->import( $file, array( 'users' => true ) );
+		return $this->import( $file, array( 'users' => true ) );
 	}
 
 	/**
@@ -398,7 +398,7 @@ class Importer extends WXRImporter {
 	 * @param string $file Path to the import file.
 	 */
 	public function import_categories( $file ) {
-		$this->import( $file, array( 'categories' => true ) );
+		return $this->import( $file, array( 'categories' => true ) );
 	}
 
 	/**
@@ -407,7 +407,7 @@ class Importer extends WXRImporter {
 	 * @param string $file Path to the import file.
 	 */
 	public function import_tags( $file ) {
-		$this->import( $file, array( 'tags' => true ) );
+		return $this->import( $file, array( 'tags' => true ) );
 	}
 
 	/**
@@ -416,7 +416,7 @@ class Importer extends WXRImporter {
 	 * @param string $file Path to the import file.
 	 */
 	public function import_terms( $file ) {
-		$this->import( $file, array( 'terms' => true ) );
+		return $this->import( $file, array( 'terms' => true ) );
 	}
 
 	/**
@@ -425,7 +425,7 @@ class Importer extends WXRImporter {
 	 * @param string $file Path to the import file.
 	 */
 	public function import_posts( $file ) {
-		$this->import( $file, array( 'posts' => true ) );
+		return $this->import( $file, array( 'posts' => true ) );
 	}
 
 	/**
