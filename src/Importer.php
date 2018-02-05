@@ -158,4 +158,219 @@ class Importer extends WXRImporter {
 
 		return $data;
 	}
+
+	/**
+	 * The main controller for the actual import stage.
+	 *
+	 * @param string $file    Path to the WXR file for importing.
+	 * @param array  $options Import options (which parts to import).
+	 *
+	 * @return boolean
+	 */
+	public function import( $file, $options = array() ) {
+		add_filter( 'import_post_meta_key', array( $this, 'is_valid_meta_key' ) );
+		add_filter( 'http_request_timeout', array( &$this, 'bump_request_timeout' ) );
+
+		// Set the import options defaults.
+		if ( empty( $options ) ) {
+			$options = array(
+				'users'      => false,
+				'categories' => true,
+				'tags'       => true,
+				'terms'      => true,
+				'posts'      => true,
+			);
+		}
+
+		$result = $this->import_start( $file );
+
+		if ( is_wp_error( $result ) ) {
+			$this->logger->error( __( 'Content import start error: ', 'wordpress-importer' ) . $result->get_error_message() );
+
+			return false;
+		}
+
+		// Get the actual XML reader.
+		$reader = $this->get_reader( $file );
+
+		if ( empty( $reader ) ) {
+			return false;
+		}
+
+		// Set the version to compatibility mode first
+		$this->version = '1.0';
+
+		// Reset other variables
+		$this->base_url = '';
+
+		// Start parsing!
+		while ( $reader->read() ) {
+			// Only deal with element opens.
+			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
+				continue;
+			}
+
+			switch ( $reader->name ) {
+				case 'wp:wxr_version':
+					// Upgrade to the correct version
+					$this->version = $reader->readString();
+
+					if ( version_compare( $this->version, self::MAX_WXR_VERSION, '>' ) ) {
+						$this->logger->warning( sprintf(
+							__( 'This WXR file (version %s) is newer than the importer (version %s) and may not be supported. Please consider updating.', 'wordpress-importer' ),
+							$this->version,
+							self::MAX_WXR_VERSION
+						) );
+					}
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				case 'wp:base_site_url':
+					$this->base_url = $reader->readString();
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				case 'item':
+					if ( empty( $options['posts'] ) ) {
+						$reader->next();
+						break;
+					}
+
+					$node   = $reader->expand();
+					$parsed = $this->parse_post_node( $node );
+
+					if ( is_wp_error( $parsed ) ) {
+						$this->log_error( $parsed );
+
+						// Skip the rest of this post
+						$reader->next();
+						break;
+					}
+
+					$this->process_post( $parsed['data'], $parsed['meta'], $parsed['comments'], $parsed['terms'] );
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				case 'wp:author':
+					if ( empty( $options['users'] ) ) {
+						$reader->next();
+						break;
+					}
+
+					$node   = $reader->expand();
+					$parsed = $this->parse_author_node( $node );
+
+					if ( is_wp_error( $parsed ) ) {
+						$this->log_error( $parsed );
+
+						// Skip the rest of this post
+						$reader->next();
+						break;
+					}
+
+					$status = $this->process_author( $parsed['data'], $parsed['meta'] );
+
+					if ( is_wp_error( $status ) ) {
+						$this->log_error( $status );
+					}
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				case 'wp:category':
+					if ( empty( $options['categories'] ) ) {
+						$reader->next();
+						break;
+					}
+
+					$node   = $reader->expand();
+					$parsed = $this->parse_term_node( $node, 'category' );
+
+					if ( is_wp_error( $parsed ) ) {
+						$this->log_error( $parsed );
+
+						// Skip the rest of this post
+						$reader->next();
+						break;
+					}
+
+					$status = $this->process_term( $parsed['data'], $parsed['meta'] );
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				case 'wp:tag':
+					if ( empty( $options['tags'] ) ) {
+						$reader->next();
+						break;
+					}
+
+					$node   = $reader->expand();
+					$parsed = $this->parse_term_node( $node, 'tag' );
+
+					if ( is_wp_error( $parsed ) ) {
+						$this->log_error( $parsed );
+
+						// Skip the rest of this post
+						$reader->next();
+						break;
+					}
+
+					$status = $this->process_term( $parsed['data'], $parsed['meta'] );
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				case 'wp:term':
+					if ( empty( $options['terms'] ) ) {
+						$reader->next();
+						break;
+					}
+
+					$node   = $reader->expand();
+					$parsed = $this->parse_term_node( $node );
+
+					if ( is_wp_error( $parsed ) ) {
+						$this->log_error( $parsed );
+
+						// Skip the rest of this post
+						$reader->next();
+						break;
+					}
+
+					$status = $this->process_term( $parsed['data'], $parsed['meta'] );
+
+					// Handled everything in this node, move on to the next
+					$reader->next();
+					break;
+
+				default:
+					// Skip this node, probably handled by something already
+					break;
+			}
+		}
+
+		// Now that we've done the main processing, do any required
+		// post-processing and remapping.
+		$this->post_process();
+
+		if ( $this->options['aggressive_url_search'] ) {
+			$this->replace_attachment_urls_in_content();
+		}
+
+		$this->remap_featured_images();
+
+		$this->import_end();
+
+		return true;
+	}
 }
