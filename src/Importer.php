@@ -28,6 +28,9 @@ class Importer extends WXRImporter {
 		parent::__construct( $options );
 
 		$this->set_logger( $logger );
+
+		// Check, if a new AJAX request is required.
+		add_filter( 'wxr_importer.pre_process.post', array( $this, 'new_ajax_request_maybe' ) );
 	}
 
 	/**
