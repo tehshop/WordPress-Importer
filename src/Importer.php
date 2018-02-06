@@ -448,7 +448,8 @@ class Importer extends WXRImporter {
 		if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 20 ) ) {
 			$response = array(
 				'status'  => 'newAJAX',
-				'message' => 'Time for new AJAX request!: ' . $time,
+				'message' => esc_html__( 'Installing', 'wordpress-importer' ),
+				'log'     => 'Time for new AJAX request!: ' . $time,
 			);
 
 			// Add message to log file.
