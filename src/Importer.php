@@ -387,6 +387,9 @@ class Importer extends WXRImporter {
 
 		$this->import_end();
 
+		// Set the current importer state, so the data can be used on the next AJAX call.
+		$this->set_current_importer_data();
+
 		return true;
 	}
 
@@ -454,7 +457,7 @@ class Importer extends WXRImporter {
 			// Add message to log file.
 			$this->logger->info( __( 'New AJAX call!', 'wordpress-importer' ) );
 
-			// Set the current importer stat, so it can be continued on the next AJAX call.
+			// Set the current importer state, so it can be continued on the next AJAX call.
 			$this->set_current_importer_data();
 
 			// Send the request for a new AJAX call.
