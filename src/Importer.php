@@ -440,6 +440,7 @@ class Importer extends WXRImporter {
 
 	/**
 	 * Check if we need to create a new AJAX request, so that server does not timeout.
+	 * And fix the import warning for missing post author.
 	 *
 	 * @param array $data current post data.
 	 * @return array
@@ -463,6 +464,11 @@ class Importer extends WXRImporter {
 			// Send the request for a new AJAX call.
 			wp_send_json( $response );
 		}
+
+		// Set importing author to the current user.
+		// Fixes the [WARNING] Could not find the author for ... log warning messages.
+		$current_user_obj    = wp_get_current_user();
+		$data['post_author'] = $current_user_obj->user_login;
 
 		return $data;
 	}
