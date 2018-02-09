@@ -5,7 +5,6 @@
 
 namespace ProteusThemes\WPContentImporter2;
 
-use WP_Error;
 use XMLReader;
 
 class Importer extends WXRImporter {
@@ -520,5 +519,14 @@ class Importer extends WXRImporter {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Get the importer mapping data.
+	 *
+	 * @return array An empty array or an array of mapping data.
+	 */
+	public function get_mapping() {
+		return $this->mapping;
 	}
 }
