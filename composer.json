@@ -1,11 +1,19 @@
 {
   "name": "proteusthemes/wp-content-importer-v2",
-  "description": "WP content importer v2 forked from humanmade/wordpress-importer.",
+  "description": "Improved WP content importer used in OCDI plugin and MerlinWP.",
   "keywords": ["wp", "wordpress", "proteusthemes", "theme", "import", "content"],
   "license": "GPL-2.0+",
   "authors": [
     {
-      "name"     : "Contributors",
+      "name":  "Gregor Capuder",
+      "email": "capuderg@gmail.com"
+    },
+    {
+      "name":  "Primoz Cigler",
+      "email": "primoz@proteusnet.com"
+    },
+    {
+      "name"     : "Humanmade contributors",
       "homepage" : "https://github.com/humanmade/WordPress-Importer/graphs/contributors"
     }
   ],
