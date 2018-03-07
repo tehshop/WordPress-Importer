@@ -513,7 +513,7 @@ class Importer extends WXRImporter {
 			$this->url_remap          = empty( $data['url_remap'] ) ? array() : $data['url_remap'];
 			$this->featured_images    = empty( $data['featured_images'] ) ? array() : $data['featured_images'];
 
-			add_action( 'pt-importer/restore_import_data_transient' );
+			do_action( 'pt-importer/restore_import_data_transient' );
 
 			return true;
 		}
