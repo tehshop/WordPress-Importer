@@ -30,6 +30,11 @@ class Importer extends WXRImporter {
 
 		// Check, if a new AJAX request is required.
 		add_filter( 'wxr_importer.pre_process.post', array( $this, 'new_ajax_request_maybe' ) );
+
+		// WooCommerce product attributes registration.
+		if ( class_exists( 'WooCommerce' ) ) {
+			add_filter( 'wxr_importer.pre_process.term', array( $this, 'woocommerce_product_attributes_registration' ), 10, 1 );
+		}
 	}
 
 	/**
@@ -528,5 +533,56 @@ class Importer extends WXRImporter {
 	 */
 	public function get_mapping() {
 		return $this->mapping;
+	}
+
+	/**
+	 * Hook into the pre-process term filter of the content import and register the
+	 * custom WooCommerce product attributes, so that the terms can then be imported normally.
+	 *
+	 * This should probably be removed once the WP importer 2.0 support is added in WooCommerce.
+	 *
+	 * Fixes: [WARNING] Failed to import pa_size L warnings in content import.
+	 * Code from: woocommerce/includes/admin/class-wc-admin-importers.php (ver 2.6.9).
+	 *
+	 * Github issue: https://github.com/proteusthemes/one-click-demo-import/issues/71
+	 *
+	 * @param  array $date The term data to import.
+	 * @return array       The unchanged term data.
+	 */
+	public function woocommerce_product_attributes_registration( $data ) {
+		global $wpdb;
+
+		if ( strstr( $data['taxonomy'], 'pa_' ) ) {
+			if ( ! taxonomy_exists( $data['taxonomy'] ) ) {
+				$attribute_name = wc_sanitize_taxonomy_name( str_replace( 'pa_', '', $data['taxonomy'] ) );
+
+				// Create the taxonomy
+				if ( ! in_array( $attribute_name, wc_get_attribute_taxonomies() ) ) {
+					$attribute = array(
+						'attribute_label'   => $attribute_name,
+						'attribute_name'    => $attribute_name,
+						'attribute_type'    => 'select',
+						'attribute_orderby' => 'menu_order',
+						'attribute_public'  => 0
+					);
+					$wpdb->insert( $wpdb->prefix . 'woocommerce_attribute_taxonomies', $attribute );
+					delete_transient( 'wc_attribute_taxonomies' );
+				}
+
+				// Register the taxonomy now so that the import works!
+				register_taxonomy(
+					$data['taxonomy'],
+					apply_filters( 'woocommerce_taxonomy_objects_' . $data['taxonomy'], array( 'product' ) ),
+					apply_filters( 'woocommerce_taxonomy_args_' . $data['taxonomy'], array(
+						'hierarchical' => true,
+						'show_ui'      => false,
+						'query_var'    => true,
+						'rewrite'      => false,
+					) )
+				);
+			}
+		}
+
+		return $data;
 	}
 }
