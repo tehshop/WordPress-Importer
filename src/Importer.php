@@ -495,8 +495,9 @@ class Importer extends WXRImporter {
 		// We should make a new ajax call, if the time is right.
 		if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 20 ) ) {
 			$response = apply_filters( 'pt-importer/new_ajax_request_response_data', array(
-				'status'  => 'newAJAX',
-				'log'     => 'Time for new AJAX request!: ' . $time,
+				'status'                => 'newAJAX',
+				'log'                   => 'Time for new AJAX request!: ' . $time,
+				'num_of_imported_posts' => count( $this->mapping['post'] ),
 			) );
 
 			// Add message to log file.
