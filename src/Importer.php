@@ -173,6 +173,46 @@ class Importer extends WXRImporter {
 		return $data;
 	}
 
+
+	/**
+	 * Get the number of posts (posts, pages, CPT, attachments), that the import file has.
+	 *
+	 * @param $file
+	 *
+	 * @return int
+	 */
+	public function get_number_of_posts_to_import( $file ) {
+		$reader  = $this->get_reader( $file );
+		$counter = 0;
+
+		if ( empty( $reader ) ) {
+			return $counter;
+		}
+
+		// Start parsing!
+		while ( $reader->read() ) {
+			// Only deal with element opens.
+			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
+				continue;
+			}
+
+			if ( 'item' == $reader->name ) {
+				$node   = $reader->expand();
+				$parsed = $this->parse_post_node( $node );
+
+				// Skip, if there was an error in parsing the item node.
+				if ( is_wp_error( $parsed ) ) {
+					$reader->next();
+					continue;
+				}
+
+				$counter++;
+			}
+		}
+
+		return $counter;
+	}
+
 	/**
 	 * The main controller for the actual import stage.
 	 *
