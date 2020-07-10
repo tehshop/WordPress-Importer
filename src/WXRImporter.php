@@ -1,5 +1,5 @@
 <?php
-namespace ProteusThemes\WPContentImporter2;
+namespace AwesomeMotive\WPContentImporter2;
 
 use WP_Error;
 use XMLReader;
