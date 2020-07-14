@@ -850,7 +850,7 @@ class WXRImporter extends \WP_Importer {
 			$postdata[ $key ] = $data[ $key ];
 		}
 
-		$postdata = apply_filters( 'wp_import_post_data_processed', $postdata, $data );
+		$postdata = apply_filters( 'wp_import_post_data_processed', wp_slash( $postdata ), $data );
 
 		if ( 'attachment' === $postdata['post_type'] ) {
 			if ( ! $this->options['fetch_attachments'] ) {
@@ -1187,7 +1187,7 @@ class WXRImporter extends \WP_Importer {
 			 * @param array $meta_item Meta data. (Return empty to skip.)
 			 * @param int $post_id Post the meta is attached to.
 			 */
-			$meta_item = apply_filters( 'wxr_importer.pre_process.post_meta', $meta_item, $post_id );
+			$meta_item = apply_filters( 'wxr_importer.pre_process.post_meta', wp_slash( $meta_item ), $post_id );
 			if ( empty( $meta_item ) ) {
 				return false;
 			}

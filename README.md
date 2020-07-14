@@ -13,6 +13,9 @@ One click demo import github page: https://github.com/awesomemotive/one-click-de
 
 ## Changelog
 
+*July 14th 2020*
+- Fixed incorrect post and post meta import (unicode and other special characters were not escaped properly).
+
 *February 7th 2018*
 - Clean up the WXRImporter code
 - Created a "wrapper" class `Importer.php` with additional functionality (importing by smaller parts -> users, categories, tags, terms and posts)
