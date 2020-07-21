@@ -15,6 +15,7 @@ One click demo import github page: https://github.com/awesomemotive/one-click-de
 
 *July 21st 2020*
 - Fixed incorrect post meta import.
+- Fixed Elementor import after `wp_slash` updates in this repo.
 
 *July 14th 2020*
 - Fixed incorrect post and post meta import (unicode and other special characters were not escaped properly).

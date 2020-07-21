@@ -330,6 +330,17 @@ class WXRImporter extends \WP_Importer {
 		add_filter( 'import_post_meta_key', array( $this, 'is_valid_meta_key' ) );
 		add_filter( 'http_request_timeout', array( &$this, 'bump_request_timeout' ) );
 
+		/*
+		 * Elementor fix for excessive use of `wp_slash` after our update v3.0.2.
+		 * Method in Elementor: \Elementor\Compatibility::register_actions
+		 * https://wordpress.org/support/topic/version-2-6-0-breaks-every-elementor-theme/
+		 *
+		 * This can be removed after Elementor skips the functionality in above method if our plugin is in use.
+		 */
+		if ( method_exists( '\Elementor\Compatibility', 'on_wxr_importer_pre_process_post_meta' ) ) {
+			remove_action( 'wxr_importer.pre_process.post_meta', array( 'Elementor\Compatibility', 'on_wxr_importer_pre_process_post_meta' ) );
+		}
+
 		$result = $this->import_start( $file );
 		if ( is_wp_error( $result ) ) {
 			return $result;
