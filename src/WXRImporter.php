@@ -1187,7 +1187,7 @@ class WXRImporter extends \WP_Importer {
 			 * @param array $meta_item Meta data. (Return empty to skip.)
 			 * @param int $post_id Post the meta is attached to.
 			 */
-			$meta_item = apply_filters( 'wxr_importer.pre_process.post_meta', wp_slash( $meta_item ), $post_id );
+			$meta_item = apply_filters( 'wxr_importer.pre_process.post_meta', $meta_item, $post_id );
 			if ( empty( $meta_item ) ) {
 				return false;
 			}
@@ -1211,7 +1211,7 @@ class WXRImporter extends \WP_Importer {
 					$value = maybe_unserialize( $meta_item['value'] );
 				}
 
-				add_post_meta( $post_id, $key, $value );
+				add_post_meta( $post_id, wp_slash( $key ), wp_slash_strings_only( $value ) );
 				do_action( 'import_post_meta', $post_id, $key, $value );
 
 				// if the post has a featured image, take note of this in case of remap
