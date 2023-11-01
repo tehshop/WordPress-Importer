@@ -1,5 +1,5 @@
 <?php
-namespace AwesomeMotive\WPContentImporter2;
+namespace Tehshop\WPContentImporter2;
 
 use WP_Error;
 use XMLReader;

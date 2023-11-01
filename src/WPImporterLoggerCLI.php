@@ -1,5 +1,5 @@
 <?php
-namespace AwesomeMotive\WPContentImporter2;
+namespace Tehshop\WPContentImporter2;
 
 class WPImporterLoggerCLI extends WPImporterLogger {
 	public $min_level = 'notice';

@@ -3,7 +3,7 @@
  * The main importer class, extending the slightly modified WP importer 2.0 class WXRImporter
  */
 
-namespace AwesomeMotive\WPContentImporter2;
+namespace Tehshop\WPContentImporter2;
 
 use XMLReader;
 
@@ -585,7 +585,7 @@ class Importer extends WXRImporter {
 	 * Fixes: [WARNING] Failed to import pa_size L warnings in content import.
 	 * Code from: woocommerce/includes/admin/class-wc-admin-importers.php (ver 2.6.9).
 	 *
-	 * Github issue: https://github.com/awesomemotive/one-click-demo-import/issues/71
+	 * Github issue: https://github.com/tehshop/one-click-demo-import/issues/71
 	 *
 	 * @param  array $date The term data to import.
 	 * @return array       The unchanged term data.

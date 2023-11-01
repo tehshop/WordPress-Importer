@@ -9,8 +9,6 @@ List of files from the [original repo](https://github.com/humanmade/WordPress-Im
 
 One click demo import plugin page: https://wordpress.org/plugins/one-click-demo-import/
 
-One click demo import github page: https://github.com/awesomemotive/one-click-demo-import
-
 ## Changelog
 
 *February 12th 2021*
