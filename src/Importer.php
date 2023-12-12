@@ -492,22 +492,25 @@ class Importer extends WXRImporter {
 	public function new_ajax_request_maybe( $data ) {
 		$time = microtime( true ) - $this->start_time;
 
-		// We should make a new ajax call, if the time is right.
-		if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 20 ) ) {
-			$response = apply_filters( 'pt-importer/new_ajax_request_response_data', array(
-				'status'                => 'newAJAX',
-				'log'                   => 'Time for new AJAX request!: ' . $time,
-				'num_of_imported_posts' => count( $this->mapping['post'] ),
-			) );
+		// Don't do this for WP CLI.
+		if ( !defined( 'WP_CLI' ) || !WP_CLI ) {
+			// We should make a new ajax call, if the time is right.
+			if ( $time > apply_filters( 'pt-importer/time_for_one_ajax_call', 20 ) ) {
+				$response = apply_filters( 'pt-importer/new_ajax_request_response_data', array(
+					'status'                => 'newAJAX',
+					'log'                   => 'Time for new AJAX request!: ' . $time,
+					'num_of_imported_posts' => count( $this->mapping['post'] ),
+				) );
 
-			// Add message to log file.
-			$this->logger->info( __( 'New AJAX call!', 'wordpress-importer' ) );
+				// Add message to log file.
+				$this->logger->info( __( 'New AJAX call!', 'wordpress-importer' ) );
 
-			// Set the current importer state, so it can be continued on the next AJAX call.
-			$this->set_current_importer_data();
+				// Set the current importer state, so it can be continued on the next AJAX call.
+				$this->set_current_importer_data();
 
-			// Send the request for a new AJAX call.
-			wp_send_json( $response );
+				// Send the request for a new AJAX call.
+				wp_send_json( $response );
+			}
 		}
 
 		// Set importing author to the current user.
