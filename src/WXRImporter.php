@@ -466,6 +466,7 @@ class WXRImporter extends \WP_Importer {
 				case 'wp:term':
 					$node = $reader->expand();
 
+					d(21323123);
 					$parsed = $this->parse_term_node( $node );
 					if ( is_wp_error( $parsed ) ) {
 						$this->log_error( $parsed );
@@ -792,6 +793,9 @@ class WXRImporter extends \WP_Importer {
 				$post_type_object->labels->singular_name,
 				$data['post_title']
 			) );
+
+			// Map the post ID
+			$this->mapping['post'][ $original_id ] = (int) $post_exists;
 
 			// Even though this post already exists, new comments might need importing
 			$this->process_comments( $comments, $original_id, $data, $post_exists );
