@@ -269,7 +269,7 @@ class Importer extends WXRImporter {
 		while ( $reader->read() ) {
 			$time = microtime( true ) - $this->start_time;
 
-			$this->logger->info( sprintf(__( 'Parse node #%s "%s". Time: %s ', 'wordpress-importer'), ++$node_index, $reader->name, $time ));
+			$this->logger->debug( sprintf(__( 'Parse node #%s "%s". Time: %s ', 'wordpress-importer'), ++$node_index, $reader->name, $time ));
 
 			// Only deal with element opens.
 			if ( $reader->nodeType !== XMLReader::ELEMENT ) {

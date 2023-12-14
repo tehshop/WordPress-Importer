@@ -77,6 +77,7 @@ class WXRImporter extends \WP_Importer {
 	 *     @var bool $prefill_existing_terms Should we prefill `term_exists` calls? (True prefills and uses more memory, false checks once per imported term and takes longer. Default is true.)
 	 *     @var bool $update_attachment_guids Should attachment GUIDs be updated to the new URL? (True updates the GUID, which keeps compatibility with v1, false doesn't update, and allows duplication and reimporting. Default is false.)
 	 *     @var bool $fetch_attachments Fetch attachments from the remote server. (True fetches and creates attachment posts, false skips attachments. Default is false.)
+	 *     @var bool $generate_attachments_metadata Generate attachments metadata includind all image sizes. (True generates, false skips generation. Default is false.)
 	 *     @var bool $aggressive_url_search Should we search/replace for URLs aggressively? (True searches all posts' content for old URLs and replaces, false checks for `<img class="wp-image-*">` only. Default is false.)
 	 *     @var int $default_author User ID to use if author is missing or invalid. (Default is null, which leaves posts unassigned.)
 	 * }
@@ -97,13 +98,14 @@ class WXRImporter extends \WP_Importer {
 		$this->exists = $empty_types;
 
 		$this->options = wp_parse_args( $options, array(
-			'prefill_existing_posts'    => true,
-			'prefill_existing_comments' => true,
-			'prefill_existing_terms'    => true,
-			'update_attachment_guids'   => false,
-			'fetch_attachments'         => false,
-			'aggressive_url_search'     => false,
-			'default_author'            => null,
+			'prefill_existing_posts'        => true,
+			'prefill_existing_comments'     => true,
+			'prefill_existing_terms'        => true,
+			'update_attachment_guids'       => false,
+			'fetch_attachments'             => false,
+			'generate_attachments_metadata' => false,
+			'aggressive_url_search'         => false,
+			'default_author'                => null,
 		) );
 	}
 
@@ -466,7 +468,6 @@ class WXRImporter extends \WP_Importer {
 				case 'wp:term':
 					$node = $reader->expand();
 
-					d(21323123);
 					$parsed = $this->parse_term_node( $node );
 					if ( is_wp_error( $parsed ) ) {
 						$this->log_error( $parsed );
@@ -800,6 +801,11 @@ class WXRImporter extends \WP_Importer {
 			// Even though this post already exists, new comments might need importing
 			$this->process_comments( $comments, $original_id, $data, $post_exists );
 
+			// Even though this post already exists, menu item might need importing
+			if ( 'nav_menu_item' === $data['post_type'] ) {
+				$this->process_menu_item_meta( $post_exists, $data, $meta );
+			}
+
 			return false;
 		}
 
@@ -1123,8 +1129,10 @@ class WXRImporter extends \WP_Importer {
 			return $post_id;
 		}
 
-		$attachment_metadata = wp_generate_attachment_metadata( $post_id, $upload['file'] );
-		wp_update_attachment_metadata( $post_id, $attachment_metadata );
+		if ($this->options['generate_attachments_metadata']) {
+			$attachment_metadata = wp_generate_attachment_metadata( $post_id, $upload['file'] );
+			wp_update_attachment_metadata( $post_id, $attachment_metadata );
+		}
 
 		// Map this image URL later if we need to
 		$this->url_remap[ $remote_url ] = $upload['url'];
@@ -2103,6 +2111,7 @@ class WXRImporter extends \WP_Importer {
 
 	protected function post_process_menu_item( $post_id ) {
 		$menu_object_id = get_post_meta( $post_id, '_wxr_import_menu_item', true );
+
 		if ( empty( $menu_object_id ) ) {
 			// No processing needed!
 			return;
