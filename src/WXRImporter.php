@@ -875,7 +875,7 @@ class WXRImporter extends \WP_Importer {
 
 		if ( 'attachment' === $postdata['post_type'] ) {
 			if ( ! $this->options['fetch_attachments'] ) {
-				$this->logger->notice( sprintf(
+				$this->logger->info( sprintf(
 					__( 'Skipping attachment "%s", fetching attachments disabled' ),
 					$data['post_title']
 				) );
