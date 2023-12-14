@@ -224,6 +224,7 @@ class Importer extends WXRImporter {
 	public function import( $file, $options = array() ) {
 		add_filter( 'import_post_meta_key', array( $this, 'is_valid_meta_key' ) );
 		add_filter( 'http_request_timeout', array( &$this, 'bump_request_timeout' ) );
+		add_filter( 'intermediate_image_sizes_advanced', array($this, 'filter_import_image_sizes'), 10, 2 );
 
 		// Start the import timer.
 		$this->start_time = microtime( true );
@@ -634,5 +635,38 @@ class Importer extends WXRImporter {
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Filter the image sizes to be imported.
+	 */
+	function filter_import_image_sizes( $sizes, $image_meta ) {
+
+		if (empty($this->options['generate_image_sizes'])) {
+			return [];
+		}
+
+		// Get filetype data.
+		$filetype = wp_check_filetype( $image_meta['file'] );
+
+		$exclude_file_types = array(
+			'image/gif',
+			'image/svg+xml',
+		);
+
+		// Check if file type is on exclude list
+		if ( in_array( $filetype['type'], $exclude_file_types ) ) {
+			$sizes = array();
+		}
+
+		// Check if image size is on import list
+		foreach ( $sizes as $size => $size_data ) {
+			if ( ! in_array( $size, $this->options['generate_image_sizes'] ) ) {
+				unset( $sizes[ $size ] );
+			}
+		}
+
+		// Return sizes you want to create from image (None if image is gif.)
+		return $sizes;
 	}
 }
