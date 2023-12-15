@@ -1923,7 +1923,7 @@ class WXRImporter extends \WP_Importer {
 						__( 'Meta for term_id %d : %s => %s ; successfully added!', 'wordpress-importer' ),
 						$term_id,
 						$key,
-						$value
+						wp_json_encode($value)
 					) );
 				}
 
