@@ -995,6 +995,10 @@ class WXRImporter extends \WP_Importer {
 				$tt_ids = wp_set_post_terms( $post_id, $ids, $tax );
 				do_action( 'wp_import_set_post_terms', $tt_ids, $ids, $tax, $post_id, $data );
 			}
+
+			if ( $requires_remapping ) {
+				$this->requires_remapping['post'][ $post_id ] = true;
+			}
 		}
 
 		$this->process_comments( $comments, $post_id, $data );
