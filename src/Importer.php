@@ -270,8 +270,6 @@ class Importer extends WXRImporter {
 		while ( $reader->read() ) {
 			$time = microtime( true ) - $this->start_time;
 
-			$this->logger->debug( sprintf(__( 'Parse node #%s "%s". Time: %s ', 'wordpress-importer'), ++$node_index, $reader->name, $time ));
-
 			// Only deal with element opens.
 			if ( $reader->nodeType !== XMLReader::ELEMENT ) {
 				continue;
@@ -551,7 +549,7 @@ class Importer extends WXRImporter {
 	 * @param array $data Data to be saved to the transient.
 	 */
 	public function save_current_import_data_transient( $data ) {
-		set_transient( 'pt_importer_data', $data, MINUTE_IN_SECONDS );
+		set_transient( 'pt_importer_data', $data, MINUTE_IN_SECONDS * 10 );
 	}
 
 	/**
